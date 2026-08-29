@@ -46,6 +46,7 @@ const productSchema = new mongoose.Schema({
 });
 
 const orderSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     customerName: String,
     phone: String,
     address: String,
@@ -65,10 +66,20 @@ const messageSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+const reviewSchema = new mongoose.Schema({
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    userName: String,
+    rating: { type: Number, required: true },
+    comment: String,
+    createdAt: { type: Date, default: Date.now }
+});
+
 const User = mongoose.model('User', userSchema);
 const Product = mongoose.model('Product', productSchema);
 const Order = mongoose.model('Order', orderSchema);
 const Message = mongoose.model('Message', messageSchema);
+const Review = mongoose.model('Review', reviewSchema);
 
 // ---------------- Auth & Profile Routes ----------------
 app.post('/api/auth/register', async (req, res) => {
@@ -87,18 +98,58 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+
+        const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+        res.json({ 
+            token, 
+            user: { 
+                id: user._id, 
+                _id: user._id, 
+                name: user.name, 
+                email: user.email, 
+                phone: user.phone || '', 
+                address: user.address || '', 
+                role: user.role 
+            } 
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Profile Fetch Route (প্রোফাইল লোড করার জন্য)
+app.get('/api/users/profile', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id || req.user._id;
+        const user = await User.findById(userId).select('-password');
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ message: 'Error fetching profile' });
+    }
+});
+
 // Profile Update Route
 app.put('/api/users/profile', authenticateToken, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        const userId = req.user.id || req.user._id;
+        const user = await User.findById(userId);
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
         user.name = req.body.name || user.name;
-        user.phone = req.body.phone || user.phone;
-        user.address = req.body.address || user.address;
+        user.phone = req.body.phone !== undefined ? req.body.phone : user.phone;
+        user.address = req.body.address !== undefined ? req.body.address : user.address;
 
         if (req.body.password && req.body.password.trim() !== '') {
             user.password = await bcrypt.hash(req.body.password, 10);
@@ -110,30 +161,16 @@ app.put('/api/users/profile', authenticateToken, async (req, res) => {
             message: 'Profile updated successfully',
             user: {
                 _id: updatedUser._id,
+                id: updatedUser._id,
                 name: updatedUser.name,
                 email: updatedUser.email,
                 phone: updatedUser.phone,
-                address: updatedUser.address
+                address: updatedUser.address,
+                role: updatedUser.role
             }
         });
     } catch (error) {
         res.status(500).json({ message: 'Error updating profile', error: error.message });
-    }
-});
-
-app.post('/api/auth/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const user = await User.findOne({ email });
-        if (!user) return res.status(400).json({ message: 'Invalid credentials' });
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
-
-        const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
-        res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
     }
 });
 
@@ -176,6 +213,19 @@ app.delete('/api/products/:id', async (req, res) => {
 });
 
 // ---------------- Order Routes ----------------
+app.get('/api/orders/my-orders', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id || req.user._id;
+        const orders = await Order.find({ 
+            $or: [{ userId: userId }, { customerName: req.user.name }] 
+        }).sort({ createdAt: -1 });
+        
+        res.json(orders);
+    } catch (err) {
+        res.status(500).json({ message: 'Server error while fetching orders' });
+    }
+});
+
 app.get('/api/orders', async (req, res) => {
     try {
         const orders = await Order.find().sort({ createdAt: -1 });
@@ -213,7 +263,65 @@ app.delete('/api/orders/:id', async (req, res) => {
     }
 });
 
-// ---------------- Chat Routes ----------------
+// ---------------- Review Routes ----------------
+app.get('/api/reviews/product/:id', async (req, res) => {
+    try {
+        const reviews = await Review.find({ productId: req.params.id });
+        const count = reviews.length;
+        const average = count > 0 ? (reviews.reduce((acc, item) => item.rating + acc, 0) / count).toFixed(1) : 0;
+        
+        res.json({ reviews, stats: { average: Number(average), count } });
+    } catch (err) {
+        res.status(500).json({ message: 'Error loading reviews' });
+    }
+});
+
+// ---------------- Chat / Message Routes ----------------
+// ইউজার ব্যাকএন্ডে মেসেজ পাঠানোর রাউট
+app.post('/api/messages/send', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id || req.user._id;
+        const user = await User.findById(userId);
+        const { text } = req.body;
+
+        const msg = new Message({
+            userId: userId,
+            senderName: user ? user.name : 'Customer',
+            text: text,
+            isAdmin: false
+        });
+
+        await msg.save();
+        res.status(201).json(msg);
+    } catch (err) {
+        res.status(500).json({ message: 'Error sending message', error: err.message });
+    }
+});
+
+// ইউজারের নিজ চ্যাট হিস্ট্রি পাওয়ার রাউট
+app.get('/api/messages/my-messages', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id || req.user._id;
+        const messages = await Message.find({ userId: userId }).sort({ createdAt: 1 });
+        res.json(messages);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// আপনার নতুন সংযুক্ত করা রাউট (Express app structure অনুযায়ী অ্যাডজাস্ট করা হয়েছে)
+app.get('/api/messages', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id || req.user._id;
+        // ইউজার আইডি দিয়ে কাস্টমার ও অ্যাডমিনের সব মেসেজ আনা হচ্ছে
+        const messages = await Message.find({ userId: userId }).sort({ createdAt: 1 });
+        res.json(messages);
+    } catch (err) {
+        res.status(500).json({ message: "Error fetching messages" });
+    }
+});
+
+// অ্যাডমিন প্যানেলের জন্য ইউজার লিস্ট
 app.get('/api/messages/users', async (req, res) => {
     try {
         const users = await User.find({ role: 'customer' }).select('name email _id');
@@ -223,6 +331,7 @@ app.get('/api/messages/users', async (req, res) => {
     }
 });
 
+// অ্যাডমিন নির্দিষ্ট ইউজারের মেসেজ দেখতে
 app.get('/api/messages/user/:userId', async (req, res) => {
     try {
         const messages = await Message.find({ userId: req.params.userId }).sort({ createdAt: 1 });
@@ -232,6 +341,7 @@ app.get('/api/messages/user/:userId', async (req, res) => {
     }
 });
 
+// অ্যাডমিন রিপ্লাই দেয়ার রাউট
 app.post('/api/messages/reply', async (req, res) => {
     try {
         const { userId, text } = req.body;
