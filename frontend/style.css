@@ -1,0 +1,31 @@
+:root {
+  --primary-color: #e88d72;
+  --secondary-color: #4a7c59;
+  --bg-color: #fafafa;
+}
+
+body {
+  background-color: var(--bg-color);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar-brand {
+  color: var(--primary-color) !important;
+  font-weight: bold;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+  background-color: #d77b61;
+}
+
+.hero-banner {
+  background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('https://images.unsplash.com/photo-1563241527-3004b7be0ffd?w=1200') center/cover;
+  color: white;
+  padding: 80px 0;
+  border-radius: 12px;
+}

@@ -1,0 +1,357 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>My Profile - Blossom & Bloom</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+</head>
+
+
+<body class="bg-light">
+
+
+<div class="container py-5">
+
+    <div
+        class="card shadow-sm p-4 mx-auto"
+        style="max-width: 600px;"
+    >
+
+        <div
+            class="d-flex
+            justify-content-between
+            align-items-center"
+        >
+
+            <h2>
+                👤 My Profile
+            </h2>
+
+            <a
+                href="index.html"
+                class="btn btn-outline-primary"
+            >
+                Home
+            </a>
+
+        </div>
+
+
+        <hr>
+
+
+        <form onsubmit="updateProfile(event)">
+
+            <label class="form-label">
+                Full Name
+            </label>
+
+            <input
+                type="text"
+                id="name"
+                class="form-control mb-3"
+                required
+            >
+
+
+            <label class="form-label">
+                Email
+            </label>
+
+            <input
+                type="email"
+                id="email"
+                class="form-control mb-3"
+                required
+            >
+
+
+            <label class="form-label">
+                Phone
+            </label>
+
+            <input
+                type="text"
+                id="phone"
+                class="form-control mb-3"
+            >
+
+
+            <label class="form-label">
+                Delivery Address
+            </label>
+
+            <textarea
+                id="address"
+                class="form-control mb-3"
+                rows="3"
+            ></textarea>
+
+
+            <label class="form-label">
+                New Password
+            </label>
+
+            <input
+                type="password"
+                id="password"
+                class="form-control mb-3"
+                placeholder="Leave empty to keep current password"
+            >
+
+
+            <button
+                class="btn btn-success w-100"
+            >
+                Update Profile
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+
+<script>
+
+const API_URL =
+    'http://localhost:5000/api';
+
+const token =
+    localStorage.getItem('token');
+
+
+// ===================================
+// CHECK LOGIN
+// ===================================
+
+if (!token) {
+
+    alert(
+        'Please login first.'
+    );
+
+    window.location.href =
+        'login.html';
+
+}
+
+
+// ===================================
+// LOAD PROFILE
+// ===================================
+
+async function loadProfile() {
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/profile`,
+                {
+
+                    headers: {
+
+                        'Authorization':
+                            `Bearer ${token}`
+
+                    }
+
+                }
+            );
+
+
+        const user =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            alert(
+                user.message ||
+                'Failed to load profile.'
+            );
+
+            return;
+        }
+
+
+        document.getElementById(
+            'name'
+        ).value =
+            user.name || '';
+
+
+        document.getElementById(
+            'email'
+        ).value =
+            user.email || '';
+
+
+        document.getElementById(
+            'phone'
+        ).value =
+            user.phone || '';
+
+
+        document.getElementById(
+            'address'
+        ).value =
+            user.address || '';
+
+
+    } catch (error) {
+
+        console.error(error);
+
+    }
+
+}
+
+
+// ===================================
+// UPDATE PROFILE
+// ===================================
+
+async function updateProfile(event) {
+
+    event.preventDefault();
+
+
+    const name =
+        document.getElementById(
+            'name'
+        ).value.trim();
+
+
+    const email =
+        document.getElementById(
+            'email'
+        ).value.trim();
+
+
+    const phone =
+        document.getElementById(
+            'phone'
+        ).value.trim();
+
+
+    const address =
+        document.getElementById(
+            'address'
+        ).value.trim();
+
+
+    const password =
+        document.getElementById(
+            'password'
+        ).value;
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/profile`,
+                {
+
+                    method: 'PUT',
+
+                    headers: {
+
+                        'Content-Type':
+                            'application/json',
+
+                        'Authorization':
+                            `Bearer ${token}`
+
+                    },
+
+                    body: JSON.stringify({
+
+                        name,
+                        email,
+                        phone,
+                        address,
+                        password
+
+                    })
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            alert(
+                data.message ||
+                'Profile update failed.'
+            );
+
+            return;
+        }
+
+
+        // Update localStorage
+
+        localStorage.setItem(
+            'userName',
+            data.user.name
+        );
+
+        localStorage.setItem(
+            'userEmail',
+            data.user.email
+        );
+
+
+        alert(
+            'Profile updated successfully!'
+        );
+
+
+        document.getElementById(
+            'password'
+        ).value = '';
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            'Cannot connect to server.'
+        );
+
+    }
+
+}
+
+
+loadProfile();
+
+</script>
+
+</body>
+</html>
+```

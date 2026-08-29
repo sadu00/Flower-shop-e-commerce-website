@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Flora & Fleur</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #faf8f5; color: #333; }
+        .brand-title { font-family: 'Great Vibes', cursive; font-size: 2.5rem; color: #6b2d39; }
+        .card-custom { border-radius: 15px; border: 1px solid #f0e6e6; width: 420px; }
+        .btn-aesthetic { background-color: #8b3a4a; color: #fff; border: none; }
+        .btn-aesthetic:hover { background-color: #6b2d39; color: #fff; }
+    </style>
+</head>
+<body class="d-flex align-items-center justify-content-center vh-100">
+
+    <div class="card p-4 shadow-sm card-custom bg-white">
+        <!-- Brand Title -->
+        <h2 class="text-center brand-title mb-1">🌸 Flora & Fleur</h2>
+        <p class="text-center text-muted small mb-4">Welcome back! Please login or register</p>
+
+        <!-- Login Form -->
+        <h4 class="fw-semibold text-center mb-3" style="color: #4a2e35;">Login</h4>
+        <input type="email" id="email" class="form-control mb-2 rounded-3" placeholder="Email Address">
+        <input type="password" id="password" class="form-control mb-3 rounded-3" placeholder="Password">
+        <button class="btn btn-aesthetic w-100 mb-3 rounded-3 py-2 fw-medium" onclick="login()">Login</button>
+        
+        <hr class="my-3">
+
+        <!-- Registration Form -->
+        <h5 class="fw-semibold text-center mb-3" style="color: #4a2e35;">Create Account</h5>
+        <input type="text" id="regName" class="form-control mb-2 rounded-3" placeholder="Full Name">
+        <input type="email" id="regEmail" class="form-control mb-2 rounded-3" placeholder="Email Address">
+        <input type="password" id="regPass" class="form-control mb-2 rounded-3" placeholder="Password">
+        
+        <!-- Account Role Selection -->
+        <div class="mb-3">
+            <label class="form-label small fw-medium mb-1">Register As:</label>
+            <select id="regRole" class="form-select rounded-3">
+                <option value="customer" selected>Customer</option>
+                <option value="admin">Admin</option>
+            </select>
+        </div>
+
+        <button class="btn btn-outline-secondary w-100 rounded-3 py-2 fw-medium" onclick="register()">Register Account</button>
+    </div>
+
+    <!-- JavaScript Logical Implementation -->
+    <script>
+        const API_URL = 'http://127.0.0.1:5000/api';
+
+        // Login Functionality
+        async function login() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                return alert('Please enter both email and password.');
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    // Save JWT Token & User Information to LocalStorage
+                    localStorage.setItem('token', data.token);
+                    const userRole = data.user?.role || data.role || 'customer';
+                    localStorage.setItem('role', userRole);
+                    localStorage.setItem('userName', data.user?.name || '');
+                    localStorage.setItem('userEmail', data.user?.email || email);
+
+                    alert('Login Successful!');
+
+                    // Redirect based on User Role
+                    location.href = userRole === 'admin' ? 'admin.html' : 'index.html';
+                } else {
+                    alert(data.message || 'Login failed!');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Cannot connect to server! Make sure node server.js is running.');
+            }
+        }
+
+        // Registration Functionality
+        async function register() {
+            const name = document.getElementById('regName').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPass').value;
+            const role = document.getElementById('regRole').value;
+
+            if (!name || !email || !password) {
+                return alert('Please fill all registration fields.');
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password, role })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    alert(`Registration Successful as ${role.toUpperCase()}! Please login with your credentials.`);
+                    document.getElementById('regName').value = '';
+                    document.getElementById('regEmail').value = '';
+                    document.getElementById('regPass').value = '';
+                } else {
+                    alert(data.message || 'Registration failed.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Cannot connect to server! Make sure node server.js is running.');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Orders - Blossom & Bloom</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-4">
+    <div class="container">
+        <!-- Navigation Header -->
+        <div class="d-flex justify-content-between align-items-center">
+            <h2>My Order History</h2>
+            <a href="index.html" class="btn btn-outline-primary">Home</a>
+        </div>
+
+        <!-- Dynamic Container for Order Cards -->
+        <div id="ordersList" class="mt-4"></div>
+    </div>
+
+    <!-- JavaScript Logical Implementation -->
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        const token = localStorage.getItem('token');
+
+        // Check user authentication
+        if (!token) {
+            alert('Please login first.');
+            location.href = 'login.html';
+        }
+
+        // Return status badge with appropriate styling
+        function badge(status) {
+            const classMap = {
+                Pending: 'bg-warning text-dark',
+                Processing: 'bg-info text-dark',
+                Completed: 'bg-success',
+                Cancelled: 'bg-danger'
+            };
+            return `<span class="badge ${classMap[status] || 'bg-secondary'}">${status || 'Pending'}</span>`;
+        }
+
+        // Fetch user's personal order history from server
+        async function fetchMyOrders() {
+            const ordersList = document.getElementById('ordersList');
+
+            try {
+                const res = await fetch(`${API_URL}/orders/my-orders`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const orders = await res.json();
+
+                if (!res.ok) {
+                    alert(orders.message || 'Failed to load orders.');
+                    return;
+                }
+
+                // Render list of orders
+                if (orders.length > 0) {
+                    ordersList.innerHTML = orders.map(o => `
+                        <div class="card mb-3 p-3 shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5>Order #${o._id}</h5>
+                                ${badge(o.status)}
+                            </div>
+                            <hr class="my-2">
+                            <p class="mb-1"><strong>Items:</strong> ${o.items?.map(i => `${i.title} × ${i.qty || 1}`).join(', ') || 'Items'}</p>
+                            <p class="mb-1"><strong>Total Price:</strong> ৳${o.totalAmount || o.totalPrice || 0}</p>
+                            <p class="mb-1"><strong>Payment:</strong> ${o.paymentMethod || 'Demo'}</p>
+                            <p class="mb-1"><strong>Delivery:</strong> ${o.address || '—'} ${o.phone ? `(${o.phone})` : ''}</p>
+                            <small class="text-muted">${new Date(o.createdAt).toLocaleString()}</small>
+                            ${o.status === 'Completed' ? `
+                                <div class="mt-3">
+                                    <a href="index.html" class="btn btn-outline-danger btn-sm">⭐ Rate & Review from a product page</a>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    ordersList.innerHTML = '<div class="alert alert-light">No orders placed yet.</div>';
+                }
+            } catch (err) {
+                console.error(err);
+                ordersList.innerHTML = '<div class="alert alert-danger">Cannot connect to server.</div>';
+            }
+        }
+
+        // Execute fetch on load
+        fetchMyOrders();
+    </script>
+</body>
+</html>

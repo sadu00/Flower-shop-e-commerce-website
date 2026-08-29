@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flora & Fleur | Admin Portal</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:ital,wght@0,500;0,700;1,400&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #faf8f5; color: #333; }
+        .custom-navbar { background: linear-gradient(135deg, #6b2d39 0%, #8b3a4a 100%); box-shadow: 0 4px 15px rgba(0,0,0,.08); }
+        .brand-title { font-family: 'Great Vibes', cursive; font-size: 2.2rem; color: #fce4ec !important; letter-spacing: 1px; }
+        .stylish-heading { font-family: 'Playfair Display', serif; font-weight: 700; color: #4a2e35; letter-spacing: .5px; }
+        .card-custom { border-radius: 15px; border: 1px solid #f0e6e6; }
+        .btn-aesthetic-danger { background-color: #8b3a4a; color: #fff; border: none; }
+        .btn-aesthetic-danger:hover { background-color: #6b2d39; color: #fff; }
+        .chat-box { height: 350px; overflow-y: auto; background: #faf8f5; border-radius: 12px; padding: 15px; border: 1px solid #eee; }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark custom-navbar sticky-top">
+        <div class="container">
+            <a class="navbar-brand brand-title" href="index.html">🌸 Flora & Fleur | Admin Portal</a>
+            <div>
+                <a href="index.html" class="btn btn-outline-light rounded-pill me-2">🌐 View Website</a>
+                <button class="btn btn-light rounded-pill px-3 fw-medium" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+
+        <!-- Add New Flower Product Section -->
+        <div class="card card-custom p-4 shadow-sm mb-5 bg-white">
+            <h3 class="stylish-heading mb-3">✨ Add New Flower Arrangement</h3>
+            <form id="addProductForm" onsubmit="handleAddProduct(event)">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Flower Title</label>
+                        <input type="text" id="pTitle" class="form-control rounded-3" placeholder="e.g. Elegant Red Roses Bouquet" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-medium">Price (৳)</label>
+                        <input type="number" id="pPrice" class="form-control rounded-3" placeholder="1800" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-medium">Category / Occasion</label>
+                        <select id="pCategory" class="form-select rounded-3" required>
+                            <option value="Love">Love & Romance</option>
+                            <option value="Birthday">Birthday</option>
+                            <option value="Anniversary">Anniversary</option>
+                            <option value="Wedding">Wedding</option>
+                            <option value="Engagement">Engagement</option>
+                            <option value="Spring">Spring / Fresh</option>
+                            <option value="Luxury">Luxury</option>
+                        </select>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-medium">Image URL</label>
+                        <input type="url" id="pImageUrl" class="form-control rounded-3" placeholder="https://images.unsplash.com/photo-..." required>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-medium">Description</label>
+                        <textarea id="pDescription" class="form-control rounded-3" rows="2" placeholder="Describe the arrangement and flowers used..."></textarea>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-aesthetic-danger btn-lg rounded-3 w-100">Add Product to Store</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Customer Order Management Section -->
+        <div class="card card-custom p-4 shadow-sm mb-5 bg-white">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h3 class="stylish-heading mb-0">🛒 Customer Orders</h3>
+                    <p class="text-muted small mb-0">Manage customer purchases, delivery info, and order status</p>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="fetchOrders()">🔄 Refresh Orders</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer Info</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Payment</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody">
+                        <tr><td colspan="7" class="text-center text-muted py-4">Loading orders...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Live Customer Messages / Chat Section -->
+        <div class="card card-custom p-4 shadow-sm mb-5 bg-white">
+            <h3 class="stylish-heading mb-3">💬 Live Customer Messages</h3>
+            <div class="row">
+                <div class="col-md-4 border-end">
+                    <h6>Conversations</h6>
+                    <div id="usersList" class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                        <small class="text-muted">Loading active chats...</small>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="chat-box mb-3" id="adminChatMessages">
+                        <p class="text-muted text-center my-5">Select a customer from the left list to view messages.</p>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="adminChatInput" class="form-control rounded-start-3" placeholder="Type a reply to customer..." disabled>
+                        <button class="btn btn-aesthetic-danger rounded-end-3" id="adminSendBtn" onclick="sendAdminMessage()" disabled>Send Reply</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Inventory Management Section -->
+        <div class="card card-custom p-4 shadow-sm mb-5 bg-white">
+            <h3 class="stylish-heading mb-3">🌿 Manage Floral Products</h3>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Image</th>
+                            <th>Title</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productsTableBody">
+                        <tr><td colspan="5" class="text-center text-muted py-4">Loading products...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Edit Product Modal -->
+    <div class="modal fade" id="editProductModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content rounded-4">
+                <div class="modal-header border-0">
+                    <h4 class="modal-title stylish-heading">✏️ Edit Flower Product</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editProductForm" onsubmit="handleUpdateProduct(event)">
+                        <input type="hidden" id="editPId">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Flower Title</label>
+                                <input type="text" id="editPTitle" class="form-control rounded-3" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-medium">Price (৳)</label>
+                                <input type="number" id="editPPrice" class="form-control rounded-3" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-medium">Category</label>
+                                <select id="editPCategory" class="form-select rounded-3" required>
+                                    <option value="Love">Love & Romance</option>
+                                    <option value="Birthday">Birthday</option>
+                                    <option value="Anniversary">Anniversary</option>
+                                    <option value="Wedding">Wedding</option>
+                                    <option value="Engagement">Engagement</option>
+                                    <option value="Spring">Spring / Fresh</option>
+                                    <option value="Luxury">Luxury</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label fw-medium">Image URL</label>
+                                <input type="url" id="editPImageUrl" class="form-control rounded-3" required>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label fw-medium">Description</label>
+                                <textarea id="editPDescription" class="form-control rounded-3" rows="2"></textarea>
+                            </div>
+                            <div class="col-12 mt-4">
+                                <button type="submit" class="btn btn-aesthetic-danger w-100 rounded-3">Save Changes</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:5000/api';
+        
+        if (!localStorage.getItem('role')) {
+            localStorage.setItem('role', 'admin');
+            localStorage.setItem('token', 'dev_admin_token');
+        }
+
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('role');
+        let selectedUserId = null;
+        let allProducts = [];
+
+        // Add Product
+        async function handleAddProduct(e) {
+            e.preventDefault();
+            const productData = {
+                title: document.getElementById('pTitle').value,
+                price: Number(document.getElementById('pPrice').value),
+                category: document.getElementById('pCategory').value,
+                imageUrl: document.getElementById('pImageUrl').value,
+                description: document.getElementById('pDescription').value
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/products`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(productData)
+                });
+
+                if (res.ok) {
+                    alert('🌸 Flower Product Added Successfully!');
+                    document.getElementById('addProductForm').reset();
+                    fetchProducts();
+                } else {
+                    alert('Failed to add product.');
+                }
+            } catch (err) {
+                alert('Server error adding product.');
+            }
+        }
+
+        // Fetch Orders
+        async function fetchOrders() {
+            try {
+                const res = await fetch(`${API_URL}/orders`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const orders = await res.json();
+                renderOrders(Array.isArray(orders) ? orders : []);
+            } catch (err) {
+                document.getElementById('ordersTableBody').innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No customer orders placed yet or server unreachable.</td></tr>';
+            }
+        }
+
+        function renderOrders(orders) {
+            const tbody = document.getElementById('ordersTableBody');
+            if (!orders || orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No customer orders placed yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = orders.map(o => `
+                <tr>
+                    <td><small class="fw-bold">${o._id}</small></td>
+                    <td>
+                        <b>${o.customerName || 'Customer'}</b><br>
+                        <small class="text-muted">📞 ${o.phone || 'N/A'}</small><br>
+                        <small class="text-muted">📍 ${o.address || 'N/A'}</small>
+                    </td>
+                    <td><small>${o.items ? o.items.map(i => `${i.title} (x${i.qty})`).join('<br>') : 'N/A'}</small></td>
+                    <td class="fw-bold text-danger">৳${o.totalAmount}</td>
+                    <td>
+                        <span class="badge bg-secondary">${o.paymentMethod || 'COD'}</span><br>
+                        <small class="text-muted">${o.paymentInfo || '-'}</small>
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm" onchange="updateOrderStatus('${o._id}', this.value)">
+                            <option value="Pending" ${o.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                            <option value="Processing" ${o.status === 'Processing' ? 'selected' : ''}>Processing</option>
+                            <option value="Delivered" ${o.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                            <option value="Cancelled" ${o.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                        </select>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteOrder('${o._id}')">🗑️ Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function updateOrderStatus(orderId, newStatus) {
+            try {
+                const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                if (res.ok) alert('Order status updated successfully!');
+            } catch (err) {
+                alert('Error updating status.');
+            }
+        }
+
+        async function deleteOrder(orderId) {
+            if (!confirm('Are you sure you want to delete this order record?')) return;
+            try {
+                const res = await fetch(`${API_URL}/orders/${orderId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) fetchOrders();
+            } catch (err) {
+                alert('Error deleting order.');
+            }
+        }
+
+        // Fetch & Manage Products
+        async function fetchProducts() {
+            try {
+                const res = await fetch(`${API_URL}/products`);
+                const data = await res.json();
+                allProducts = Array.isArray(data) ? data : [];
+                
+                const tbody = document.getElementById('productsTableBody');
+                
+                if (!allProducts.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No products found in store. Add some above!</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = allProducts.map(p => `
+                    <tr>
+                        <td><img src="${p.imageUrl}" style="width:50px; height:50px; object-fit:cover; border-radius:8px" onerror="this.src='https://via.placeholder.com/50'"></td>
+                        <td><b>${p.title}</b></td>
+                        <td><span class="badge bg-light text-dark border">${p.category}</span></td>
+                        <td class="fw-bold" style="color:#8b3a4a">৳${p.price}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditModal('${p._id}')">✏️ Edit</button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${p._id}')">🗑️ Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                document.getElementById('productsTableBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No products found or backend server is starting...</td></tr>';
+            }
+        }
+
+        // Open Edit Modal
+        function openEditModal(id) {
+            const p = allProducts.find(item => item._id === id);
+            if (!p) return;
+
+            document.getElementById('editPId').value = p._id;
+            document.getElementById('editPTitle').value = p.title;
+            document.getElementById('editPPrice').value = p.price;
+            document.getElementById('editPCategory').value = p.category;
+            document.getElementById('editPImageUrl').value = p.imageUrl;
+            document.getElementById('editPDescription').value = p.description || '';
+
+            new bootstrap.Modal(document.getElementById('editProductModal')).show();
+        }
+
+        // Update Product
+        async function handleUpdateProduct(e) {
+            e.preventDefault();
+            const id = document.getElementById('editPId').value;
+            const updatedData = {
+                title: document.getElementById('editPTitle').value,
+                price: Number(document.getElementById('editPPrice').value),
+                category: document.getElementById('editPCategory').value,
+                imageUrl: document.getElementById('editPImageUrl').value,
+                description: document.getElementById('editPDescription').value
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/products/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(updatedData)
+                });
+
+                if (res.ok) {
+                    alert('✨ Product Updated Successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('editProductModal')).hide();
+                    fetchProducts();
+                } else {
+                    alert('Failed to update product.');
+                }
+            } catch (err) {
+                alert('Server error updating product.');
+            }
+        }
+
+        // Delete Product
+        async function deleteProduct(id) {
+            if (!confirm('Are you sure you want to delete this flower product?')) return;
+            try {
+                const res = await fetch(`${API_URL}/products/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) fetchProducts();
+            } catch (err) {
+                alert('Error deleting product.');
+            }
+        }
+
+        // Chat Logic
+        async function fetchChatUsers() {
+            try {
+                const res = await fetch(`${API_URL}/messages/users`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const users = await res.json();
+                const usersList = document.getElementById('usersList');
+
+                if (!users || !Array.isArray(users) || users.length === 0) {
+                    usersList.innerHTML = '<small class="text-muted">No customer messages yet.</small>';
+                    return;
+                }
+
+                usersList.innerHTML = users.map(u => `
+                    <button class="list-group-item list-group-item-action border-0 mb-1 rounded-2" onclick="selectUserForChat('${u._id}', '${u.name}')">
+                        💬 <b>${u.name}</b>
+                    </button>
+                `).join('');
+            } catch (err) {
+                document.getElementById('usersList').innerHTML = '<small class="text-muted">No active customer chats.</small>';
+            }
+        }
+
+        function selectUserForChat(userId, userName) {
+            selectedUserId = userId;
+            document.getElementById('adminChatInput').disabled = false;
+            document.getElementById('adminSendBtn').disabled = false;
+            loadUserMessages(userId);
+        }
+
+        async function loadUserMessages(userId) {
+            try {
+                const res = await fetch(`${API_URL}/messages/user/${userId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const msgs = await res.json();
+                const container = document.getElementById('adminChatMessages');
+
+                container.innerHTML = msgs.map(m => `
+                    <div class="mb-2 ${m.isAdmin ? 'text-end' : 'text-start'}">
+                        <span class="d-inline-block p-2 rounded-3 ${m.isAdmin ? 'text-white' : 'bg-white'}" style="${m.isAdmin ? 'background:#8b3a4a' : 'border:1px solid #ddd'}">
+                            <b>${m.senderName}</b><br>${m.text}
+                        </span>
+                    </div>
+                `).join('');
+                container.scrollTop = container.scrollHeight;
+            } catch (err) {
+                document.getElementById('adminChatMessages').innerHTML = '<p class="text-danger">Error loading chat.</p>';
+            }
+        }
+
+        async function sendAdminMessage() {
+            const input = document.getElementById('adminChatInput');
+            const text = input.value.trim();
+            if (!text || !selectedUserId) return;
+
+            try {
+                const res = await fetch(`${API_URL}/messages/reply`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ userId: selectedUserId, text })
+                });
+
+                if (res.ok) {
+                    input.value = '';
+                    loadUserMessages(selectedUserId);
+                }
+            } catch (err) {
+                alert('Error sending reply.');
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            location.href = 'login.html';
+        }
+
+        // Initialize Data
+        fetchOrders();
+        fetchProducts();
+        fetchChatUsers();
+    </script>
+</body>
+</html>
