@@ -11,6 +11,7 @@ app.use(express.json());
 app.use(cors());
 app.use('/images', express.static('images'));
 
+
 const JWT_SECRET = 'flora_fleur_secret_key_123';
 
 // ---------------- MongoDB Models ----------------
