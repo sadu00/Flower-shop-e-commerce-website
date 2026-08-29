@@ -159,6 +159,52 @@
         </div>
     </div>
 
+    <!-- User Profile Modal (NEW ADDED) -->
+    <div class="modal fade" id="profileModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content rounded-4">
+                <div class="modal-header">
+                    <h5 class="modal-title stylish-heading">👤 My Profile</h5>
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="profileForm" onsubmit="updateProfile(event)">
+                        <div class="mb-3">
+                            <label class="form-label font-weight-bold">Full Name</label>
+                            <input type="text" id="profName" class="form-control rounded-3" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label font-weight-bold">Phone Number</label>
+                            <input type="text" id="profPhone" class="form-control rounded-3" placeholder="Enter your phone number">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label font-weight-bold">Delivery Address</label>
+                            <textarea id="profAddress" class="form-control rounded-3" rows="3" placeholder="Enter default delivery address"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-aesthetic-danger w-100 rounded-3">Save Profile Updates</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order History Modal (NEW ADDED) -->
+    <div class="modal fade" id="ordersModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content rounded-4">
+                <div class="modal-header">
+                    <h5 class="modal-title stylish-heading">📦 My Order History</h5>
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="ordersList">
+                        <p class="text-center text-muted">Loading your orders...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -167,6 +213,7 @@
         const API_URL = 'http://localhost:5000/api';
         let products = [];
         let cart = JSON.parse(localStorage.getItem('cart')) || [];
+        let chatInterval = null;
         const token = () => localStorage.getItem('token');
 
         // Check user session & update navbar dynamically
@@ -175,8 +222,8 @@
             if (t) {
                 nav.innerHTML = `
                     ${role === 'admin' ? '<a href="admin.html" class="btn btn-warning me-2 rounded-pill">Admin Dashboard</a>' : ''}
-                    <a href="profile.html" class="btn btn-light me-2 rounded-pill">Profile</a>
-                    <a href="orders.html" class="btn btn-outline-light me-2 rounded-pill">Orders</a>
+                    <button onclick="openProfileModal()" class="btn btn-light me-2 rounded-pill">Profile</button>
+                    <button onclick="openOrdersModal()" class="btn btn-outline-light me-2 rounded-pill">Orders</button>
                     <button class="btn btn-outline-light rounded-pill" onclick="logout()">Logout</button>
                 `;
             }
@@ -379,7 +426,7 @@
                     cart = [];
                     saveCart();
                     bootstrap.Modal.getInstance(document.getElementById('cartModal')).hide();
-                    location.href = 'orders.html';
+                    openOrdersModal(); // Placed Order এর পর পপ-আপে Orders দেখাবে
                 } else {
                     alert(resData.message || 'Failed to place order.');
                 }
@@ -454,25 +501,50 @@
                 location.href = 'login.html';
                 return;
             }
+            
             loadChat();
-            new bootstrap.Modal(document.getElementById('chatModal')).show();
+            
+            if (!chatInterval) {
+                chatInterval = setInterval(loadChat, 3000);
+            }
+
+            const chatModalEl = document.getElementById('chatModal');
+            const chatModal = new bootstrap.Modal(chatModalEl);
+            chatModal.show();
+
+            chatModalEl.addEventListener('hidden.bs.modal', function () {
+                clearInterval(chatInterval);
+                chatInterval = null;
+            }, { once: true });
         }
 
         async function loadChat() {
-            const res = await fetch(`${API_URL}/messages`, {
-                headers: { 'Authorization': `Bearer ${token()}` }
-            });
-            const msgs = await res.json();
-            const container = document.getElementById('chatMessages');
+            try {
+                const res = await fetch(`${API_URL}/messages`, {
+                    headers: { 'Authorization': `Bearer ${token()}` }
+                });
 
-            container.innerHTML = msgs.map(m => `
-                <div class="mb-2 ${m.isAdmin ? 'text-start' : 'text-end'}">
-                    <span class="d-inline-block p-2 rounded-3 ${m.isAdmin ? 'bg-white' : 'text-white'}" style="${m.isAdmin ? 'border:1px solid #eee' : 'background:#8b3a4a'}">
-                        <b>${m.senderName}</b><br>${m.text}
-                    </span>
-                </div>
-            `).join('');
-            container.scrollTop = container.scrollHeight;
+                if (!res.ok) return;
+
+                const msgs = await res.json();
+                const container = document.getElementById('chatMessages');
+
+                container.innerHTML = msgs.map(m => `
+                    <div class="mb-2 ${m.isAdmin ? 'text-start' : 'text-end'}">
+                        <span class="d-inline-block p-2 rounded-3 ${m.isAdmin ? 'bg-white text-dark border' : 'text-white'}" 
+                              style="${m.isAdmin ? '' : 'background:#8b3a4a'}">
+                            <small class="d-block fw-bold text-muted mb-1" style="font-size: 11px;">
+                                ${m.isAdmin ? 'Admin' : 'You'}
+                            </small>
+                            ${m.text}
+                        </span>
+                    </div>
+                `).join('');
+
+                container.scrollTop = container.scrollHeight;
+            } catch (err) {
+                console.error('Chat load error:', err);
+            }
         }
 
         async function sendChat() {
@@ -480,27 +552,132 @@
             const text = input.value.trim();
             if (!text) return;
 
-            const res = await fetch(`${API_URL}/messages`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token()}`
-                },
-                body: JSON.stringify({ text })
-                
-            });
+            try {
+                const res = await fetch(`${API_URL}/messages/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token()}`
+                    },
+                    body: JSON.stringify({ text })
+                });
 
-            if (res.ok) {
-                input.value = '';
-                loadChat();
+                if (res.ok) {
+                    input.value = '';
+                    loadChat();
+                }
+            } catch (err) {
+                console.error('Error sending message:', err);
             }
         }
 
-        // Initialization
-        checkAuth();
-        fetchProducts();
-        updateCartUI();
-        togglePaymentInput();
+        // ================= NEW ADDED: PROFILE & ORDERS HANDLERS =================
+
+        // 1. Profile Logic
+        async function openProfileModal() {
+            if (!token()) return alert('Please login first.');
+            try {
+                const res = await fetch(`${API_URL}/users/profile`, {
+                    headers: { 'Authorization': `Bearer ${token()}` }
+                });
+                const user = await res.json();
+                document.getElementById('profName').value = user.name || localStorage.getItem('userName') || '';
+                document.getElementById('profPhone').value = user.phone || '';
+                document.getElementById('profAddress').value = user.address || '';
+                
+                new bootstrap.Modal(document.getElementById('profileModal')).show();
+            } catch (err) {
+                alert('Failed to load profile details.');
+            }
+        }
+
+        async function updateProfile(e) {
+            e.preventDefault();
+            const updatedData = {
+                name: document.getElementById('profName').value,
+                phone: document.getElementById('profPhone').value,
+                address: document.getElementById('profAddress').value
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/users/profile`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token()}`
+                    },
+                    body: JSON.stringify(updatedData)
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert('✨ Profile updated successfully!');
+                    localStorage.setItem('userName', updatedData.name);
+                    bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();
+                } else {
+                    alert(data.message || 'Update failed.');
+                }
+            } catch (err) {
+                alert('Server error while updating profile.');
+            }
+        }
+
+        // 2. Orders Logic
+        async function openOrdersModal() {
+            if (!token()) return alert('Please login first.');
+            const modal = new bootstrap.Modal(document.getElementById('ordersModal'));
+            modal.show();
+
+            const container = document.getElementById('ordersList');
+            container.innerHTML = '<p class="text-center text-muted">Loading your orders...</p>';
+
+            try {
+                const res = await fetch(`${API_URL}/orders/my-orders`, {
+                    headers: { 'Authorization': `Bearer ${token()}` }
+                });
+                const orders = await res.json();
+
+                if (!res.ok || !orders.length) {
+                    container.innerHTML = '<p class="text-center text-muted">No order history found.</p>';
+                    return;
+                }
+
+                container.innerHTML = orders.map(o => `
+                    <div class="card mb-3 border-0 shadow-sm rounded-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-bold mb-0">Order #${o._id.slice(-6).toUpperCase()}</h6>
+                                <span class="badge bg-${o.status === 'Delivered' ? 'success' : o.status === 'Cancelled' ? 'danger' : 'warning'}">
+                                    ${o.status || 'Pending'}
+                                </span>
+                            </div>
+                            <p class="small text-muted mb-1">Date: ${new Date(o.createdAt).toLocaleDateString()}</p>
+                            <p class="small text-muted mb-2">Payment: ${o.paymentMethod} (${o.paymentInfo})</p>
+                            <ul class="list-group list-group-flush mb-2">
+                                ${o.items.map(item => `
+                                    <li class="list-group-item px-0 py-1 d-flex justify-content-between align-items-center bg-transparent border-0 small">
+                                        <span>${item.title} × ${item.qty}</span>
+                                        <span>৳${item.price * item.qty}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                            <div class="d-flex justify-content-between fw-bold text-danger pt-2 border-top">
+                                <span>Total Paid</span>
+                                <span>৳${o.totalAmount}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = '<p class="text-center text-danger">Failed to load order history.</p>';
+            }
+        }
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            fetchProducts();
+            updateCartUI();
+        });
     </script>
 </body>
 </html>
