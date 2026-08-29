@@ -11,16 +11,30 @@ app.use(express.json());
 app.use(cors());
 app.use('/images', express.static('images'));
 
-
 const JWT_SECRET = 'flora_fleur_secret_key_123';
+
+// JWT Authentication Middleware
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.status(401).json({ message: 'Access Token Required' });
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ message: 'Invalid or Expired Token' });
+        req.user = user;
+        next();
+    });
+};
 
 // ---------------- MongoDB Models ----------------
 const userSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-
     password: { type: String, required: true },
-    role: { type: String, default: 'customer' }
+    role: { type: String, default: 'customer' },
+    phone: { type: String, default: '' },
+    address: { type: String, default: '' }
 });
 
 const productSchema = new mongoose.Schema({
@@ -56,7 +70,7 @@ const Product = mongoose.model('Product', productSchema);
 const Order = mongoose.model('Order', orderSchema);
 const Message = mongoose.model('Message', messageSchema);
 
-// ---------------- Auth Routes ----------------
+// ---------------- Auth & Profile Routes ----------------
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
@@ -68,7 +82,12 @@ app.post('/api/auth/register', async (req, res) => {
         await user.save();
 
         res.status(201).json({ message: 'User registered successfully' });
-        // Profile Update Route
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Profile Update Route
 app.put('/api/users/profile', authenticateToken, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
@@ -99,11 +118,6 @@ app.put('/api/users/profile', authenticateToken, async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ message: 'Error updating profile', error: error.message });
-    }
-});
-
-    } catch (err) {
-        res.status(500).json({ message: err.message });
     }
 });
 
