@@ -18,7 +18,7 @@ const JWT_SECRET = 'flora_fleur_secret_key_123';
 const userSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    
+
     password: { type: String, required: true },
     role: { type: String, default: 'customer' }
 });
@@ -68,6 +68,40 @@ app.post('/api/auth/register', async (req, res) => {
         await user.save();
 
         res.status(201).json({ message: 'User registered successfully' });
+        // Profile Update Route
+app.put('/api/users/profile', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.name = req.body.name || user.name;
+        user.phone = req.body.phone || user.phone;
+        user.address = req.body.address || user.address;
+
+        if (req.body.password && req.body.password.trim() !== '') {
+            user.password = await bcrypt.hash(req.body.password, 10);
+        }
+
+        const updatedUser = await user.save();
+
+        res.json({
+            message: 'Profile updated successfully',
+            user: {
+                _id: updatedUser._id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                phone: updatedUser.phone,
+                address: updatedUser.address
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating profile', error: error.message });
+    }
+});
+
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
