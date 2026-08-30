@@ -1078,8 +1078,9 @@ if (!process.env.VERCEL) {
     );
 
 }
+
 app.get('/', (req, res) => {
-  res.send("Backend server is live and working!");
+  res.status(200).json({ message: "Flower Shop Backend is live and working!" });
 });
 
 
