@@ -1,3 +1,6 @@
+ app.get('/', (req, res) => {
+    res.send("Bloomly Flower Shop Backend API is Running!");
+});
 require('dotenv').config();
 
 const express = require('express');
