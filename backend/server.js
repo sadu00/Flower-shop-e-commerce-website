@@ -1,4 +1,7 @@
- app.get('/', (req, res) => {
+ app.get("/", (req, res) => {
+  res.send("Server is running smoothly!");
+});
+app.get('/', (req, res) => {
     res.send("Bloomly Flower Shop Backend API is Running!");
 });
 require('dotenv').config();
