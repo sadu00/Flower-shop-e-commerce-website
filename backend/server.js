@@ -1032,8 +1032,8 @@ app.post(
 
 const MONGO_URI =
     process.env.MONGO_URI ||
-    'mongodb://127.0.0.1:27017/flora_fleur';
-
+    process.env.MONGODB_URI ||
+    'mongodb+srv://saduaadmin:sadia77@cluster0.ykv8qem.mongodb.net/flora_fleur?retryWrites=true&w=majority';
 
 mongoose.connect(MONGO_URI)
 
