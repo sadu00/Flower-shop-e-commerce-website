@@ -240,7 +240,7 @@
         // Fetch Product List from Backend
         async function fetchProducts() {
             try {
-                const res = await fetch(`${API_URL}/products`);
+                const res = await fetch(`${API_URL}/api/products`);
                 products = await res.json();
                 renderProducts(products);
             } catch (err) {
