@@ -1078,6 +1078,9 @@ if (!process.env.VERCEL) {
     );
 
 }
+app.get('/', (req, res) => {
+  res.send("Backend server is live and working!");
+});
 
 // Vercel কে app টা serverless function হিসেবে ব্যবহার করতে দিতে export করা lagbe
 module.exports = app;
