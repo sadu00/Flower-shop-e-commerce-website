@@ -1,9 +1,3 @@
- app.get("/", (req, res) => {
-  res.send("Server is running smoothly!");
-});
-app.get('/', (req, res) => {
-    res.send("Bloomly Flower Shop Backend API is Running!");
-});
 require('dotenv').config();
 
 const express = require('express');
@@ -1065,16 +1059,25 @@ const PORT =
     process.env.PORT || 5000;
 
 
-// IMPORTANT FOR ONLINE DEPLOYMENT
+// ---------------- Local vs Vercel ----------------
+// Vercel serverless environment এ app.listen() চালানো যায় না।
+// শুধু local development এ (VERCEL env var না থাকলে) server চালু হবে।
 
-app.listen(
-    PORT,
-    '0.0.0.0',
-    () => {
+if (!process.env.VERCEL) {
 
-        console.log(
-            `🚀 Server running on port ${PORT}`
-        );
+    app.listen(
+        PORT,
+        '0.0.0.0',
+        () => {
 
-    }
-);
+            console.log(
+                `🚀 Server running on port ${PORT}`
+            );
+
+        }
+    );
+
+}
+
+// Vercel কে app টা serverless function হিসেবে ব্যবহার করতে দিতে export করা lagbe
+module.exports = app;
