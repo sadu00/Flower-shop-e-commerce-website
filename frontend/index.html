@@ -159,7 +159,7 @@
         </div>
     </div>
 
-    <!-- User Profile Modal (NEW ADDED) -->
+    <!-- User Profile Modal -->
     <div class="modal fade" id="profileModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content rounded-4">
@@ -188,7 +188,7 @@
         </div>
     </div>
 
-    <!-- Order History Modal (NEW ADDED) -->
+    <!-- Order History Modal -->
     <div class="modal fade" id="ordersModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content rounded-4">
@@ -237,14 +237,21 @@
             location.reload();
         }
 
-        // Fetch Product List from Backend
+        // Fetch Product List from Backend (UPDATED LOGIC)
         async function fetchProducts() {
             try {
                 const res = await fetch(`${API_URL}/api/products`);
-                products = await res.json();
+                if (!res.ok) throw new Error('Failed to fetch products');
+                
+                const data = await res.json();
+                
+                // ডাটা অ্যারে নিশ্চিত হয়ে products গ্লোবাল ভেরিয়েবলে রাখবে এবং render-এ পাঠাবে
+                products = Array.isArray(data) ? data : (data.products || []);
                 renderProducts(products);
             } catch (err) {
-                document.getElementById('productGrid').innerHTML = '<div class="col-12 text-center text-danger">Cannot connect to server.</div>';
+                console.error('Error loading products:', err);
+                products = [];
+                renderProducts([]); // খালি অ্যারে পাঠিয়ে পেজ ক্র্যাশ প্রতিরোধ করবে
             }
         }
 
@@ -261,35 +268,44 @@
             }
         }
 
-        // Render Product Cards
+        // Render Product Cards (UPDATED LOGIC)
         async function renderProducts(list) {
-            const grid = document.getElementById('productGrid');
-            grid.innerHTML = list.length ? list.map(p => `
+            const container = document.getElementById('productGrid');
+            if (!container) return;
+
+            if (!Array.isArray(list) || list.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center text-muted py-4">No products found.</div>';
+                return;
+            }
+
+            container.innerHTML = list.map(product => `
                 <div class="col-md-4 mb-4">
                     <div class="card flower-card h-100 bg-white shadow-sm border-0">
                         <div style="height:320px; background:#FAF9F6" class="d-flex align-items-center justify-content-center p-2">
-                            <img src="${p.imageUrl}" class="w-100 h-100" style="object-fit:contain; border-radius:10px" onerror="this.src='https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500'">
+                            <img src="${product.imageUrl || product.image}" class="w-100 h-100" style="object-fit:contain; border-radius:10px" onerror="this.src='https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500'">
                         </div>
                         <div class="card-body d-flex flex-column">
-                            <h5 class="card-title stylish-heading fs-5">${p.title}</h5>
-                            <p class="card-text text-muted small">${p.description || ''}</p>
-                            <div id="rating-${p._id}" class="small text-warning mb-2">Loading ratings...</div>
+                            <h5 class="card-title stylish-heading fs-5">${product.title || product.name}</h5>
+                            <p class="card-text text-muted small">${product.description || ''}</p>
+                            <div id="rating-${product._id}" class="small text-warning mb-2">Loading ratings...</div>
                             <div class="mt-auto d-flex justify-content-between align-items-center">
-                                <span class="fs-5 fw-bold" style="color:#8b3a4a">৳${p.price}</span>
+                                <span class="fs-5 fw-bold" style="color:#8b3a4a">৳${product.price}</span>
                                 <div>
-                                    <button class="btn btn-sm btn-outline-secondary rounded-pill me-1" onclick="showReviews('${p._id}','${safe(p.title)}')">Reviews</button>
-                                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="addToCart('${p._id}','${safe(p.title)}',${p.price})">Add to Cart</button>
+                                    <button class="btn btn-sm btn-outline-secondary rounded-pill me-1" onclick="showReviews('${product._id}','${safe(product.title || product.name)}')">Reviews</button>
+                                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="addToCart('${product._id}','${safe(product.title || product.name)}',${product.price})">Add to Cart</button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            `).join('') : '<div class="col-12 text-center text-muted py-4">No flowers found matching your filter.</div>';
+            `).join('');
 
             for (const p of list) {
-                const data = await getReviewStats(p._id);
-                const el = document.getElementById('rating-' + p._id);
-                if (el) el.innerHTML = data.stats && data.stats.count ? `${renderStars(data.stats.average)} <span class="text-muted">${data.stats.average} (${data.stats.count})</span>` : 'No reviews yet';
+                if (p._id) {
+                    const data = await getReviewStats(p._id);
+                    const el = document.getElementById('rating-' + p._id);
+                    if (el) el.innerHTML = data.stats && data.stats.count ? `${renderStars(data.stats.average)} <span class="text-muted">${data.stats.average} (${data.stats.count})</span>` : 'No reviews yet';
+                }
             }
         }
 
@@ -303,11 +319,13 @@
             const category = document.getElementById('categoryFilter').value;
             const maxPrice = Number(document.getElementById('priceFilter').value);
 
-            renderProducts(products.filter(p => 
-                (p.title.toLowerCase().includes(search) || (p.description || '').toLowerCase().includes(search)) &&
-                (!category || p.category === category) &&
-                (!maxPrice || p.price <= maxPrice)
-            ));
+            renderProducts(products.filter(p => {
+                const title = (p.title || p.name || '').toLowerCase();
+                const desc = (p.description || '').toLowerCase();
+                return (title.includes(search) || desc.includes(search)) &&
+                       (!category || p.category === category) &&
+                       (!maxPrice || p.price <= maxPrice);
+            }));
         }
 
         function resetFilters() {
@@ -426,7 +444,7 @@
                     cart = [];
                     saveCart();
                     bootstrap.Modal.getInstance(document.getElementById('cartModal')).hide();
-                    openOrdersModal(); // Placed Order এর পর পপ-আপে Orders দেখাবে
+                    openOrdersModal();
                 } else {
                     alert(resData.message || 'Failed to place order.');
                 }
@@ -571,9 +589,7 @@
             }
         }
 
-        // ================= NEW ADDED: PROFILE & ORDERS HANDLERS =================
-
-        // 1. Profile Logic
+        // Profile Logic
         async function openProfileModal() {
             if (!token()) return alert('Please login first.');
             try {
@@ -621,7 +637,7 @@
             }
         }
 
-        // 2. Orders Logic
+        // Orders Logic
         async function openOrdersModal() {
             if (!token()) return alert('Please login first.');
             const modal = new bootstrap.Modal(document.getElementById('ordersModal'));
@@ -660,9 +676,9 @@
                                     </li>
                                 `).join('')}
                             </ul>
-                            <div class="d-flex justify-content-between fw-bold text-danger pt-2 border-top">
-                                <span>Total Paid</span>
-                                <span>৳${o.totalAmount}</span>
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                <span class="fw-bold small">Total Amount</span>
+                                <span class="fw-bold text-danger">৳${o.totalAmount}</span>
                             </div>
                         </div>
                     </div>
@@ -672,12 +688,10 @@
             }
         }
 
-        // Initialize App
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAuth();
-            fetchProducts();
-            updateCartUI();
-        });
+        // Initial Setup
+        checkAuth();
+        fetchProducts();
+        updateCartUI();
     </script>
 </body>
 </html>
