@@ -1032,7 +1032,7 @@ app.post(
 
 const MONGO_URI =
     process.env.MONGO_URI ||
-    'mongodb://127.0.0.1:27017/flora_db';
+    'mongodb://127.0.0.1:27017/flora_fleur';
 
 
 mongoose.connect(MONGO_URI)
