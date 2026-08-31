@@ -1,6 +1,12 @@
-require('dotenv').config();
-
+try {
+  require('dotenv').config();
+} catch (e) {
+  // Vercel deployment Level Ignore
+}
 const express = require('express');
+
+
+
 const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
