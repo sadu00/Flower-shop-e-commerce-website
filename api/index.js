@@ -1,12 +1,10 @@
 try {
-  require('dotenv').config();
+    require('dotenv').config();
 } catch (e) {
-  // Vercel deployment Level Ignore
+    // Vercel deployment Level Ignore
 }
+
 const express = require('express');
-
-
-
 const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
@@ -26,28 +24,129 @@ app.use('/images', express.static('images'));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'flora_fleur_secret_key_123';
 
-// ---------------- JWT Authentication Middleware ----------------
+// ============================================================
+//                MONGODB CONNECTION
+// ============================================================
 
-const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+const MONGO_URI =
+    process.env.MONGO_URI ||
+    process.env.MONGODB_URI ||
+    'mongodb+srv://saduaadmin:sadia77@cluster0.ykv8qem.mongodb.net/flora_fleur?retryWrites=true&w=majority';
 
-    if (!token) {
-        return res.status(401).json({
-            message: 'Access Token Required'
-        });
+let dbConnectionPromise = null;
+
+async function connectDB() {
+
+    // Already connected
+    if (mongoose.connection.readyState === 1) {
+        return;
     }
 
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({
-                message: 'Invalid or Expired Token'
-            });
-        }
+    // Connection already in progress
+    if (!dbConnectionPromise) {
 
-        req.user = user;
+        dbConnectionPromise = mongoose.connect(MONGO_URI, {
+            serverSelectionTimeoutMS: 10000,
+            connectTimeoutMS: 10000
+        });
+
+    }
+
+    try {
+
+        await dbConnectionPromise;
+
+        console.log('✅ MongoDB Connected Successfully!');
+
+    } catch (error) {
+
+        dbConnectionPromise = null;
+
+        console.error(
+            '❌ MongoDB Connection Error:',
+            error.message
+        );
+
+        throw error;
+    }
+}
+
+
+// ============================================================
+//              DATABASE CONNECTION MIDDLEWARE
+// ============================================================
+
+app.use(async (req, res, next) => {
+
+    try {
+
+        await connectDB();
+
         next();
-    });
+
+    } catch (error) {
+
+        console.error(
+            '❌ Database connection failed:',
+            error.message
+        );
+
+        res.status(500).json({
+
+            message: 'MongoDB connection failed',
+
+            error: error.message
+
+        });
+
+    }
+
+});
+
+
+// ============================================================
+// JWT Authentication Middleware
+// ============================================================
+
+const authenticateToken = (req, res, next) => {
+
+    const authHeader = req.headers['authorization'];
+
+    const token =
+        authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+
+        return res.status(401).json({
+
+            message: 'Access Token Required'
+
+        });
+
+    }
+
+    jwt.verify(
+        token,
+        JWT_SECRET,
+        (err, user) => {
+
+            if (err) {
+
+                return res.status(403).json({
+
+                    message: 'Invalid or Expired Token'
+
+                });
+
+            }
+
+            req.user = user;
+
+            next();
+
+        }
+    );
+
 };
 
 
@@ -58,6 +157,7 @@ const authenticateToken = (req, res, next) => {
 // ---------------- User Model ----------------
 
 const userSchema = new mongoose.Schema({
+
     name: {
         type: String,
         required: true
@@ -88,12 +188,14 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: ''
     }
+
 });
 
 
 // ---------------- Product Model ----------------
 
 const productSchema = new mongoose.Schema({
+
     title: {
         type: String,
         required: true
@@ -118,12 +220,14 @@ const productSchema = new mongoose.Schema({
         type: String,
         default: ''
     }
+
 });
 
 
 // ---------------- Order Model ----------------
 
 const orderSchema = new mongoose.Schema({
+
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
@@ -152,12 +256,14 @@ const orderSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
+
 });
 
 
 // ---------------- Message Model ----------------
 
 const messageSchema = new mongoose.Schema({
+
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
@@ -176,12 +282,14 @@ const messageSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
+
 });
 
 
 // ---------------- Review Model ----------------
 
 const reviewSchema = new mongoose.Schema({
+
     productId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Product'
@@ -205,6 +313,7 @@ const reviewSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
+
 });
 
 
@@ -239,30 +348,41 @@ app.post('/api/auth/register', async (req, res) => {
         });
 
         if (existingUser) {
+
             return res.status(400).json({
+
                 message: 'User already exists'
+
             });
+
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword =
+            await bcrypt.hash(password, 10);
 
         const user = new User({
+
             name,
             email,
             password: hashedPassword,
             role: role || 'customer'
+
         });
 
         await user.save();
 
         res.status(201).json({
+
             message: 'User registered successfully'
+
         });
 
     } catch (err) {
 
         res.status(500).json({
+
             message: err.message
+
         });
 
     }
@@ -286,32 +406,46 @@ app.post('/api/auth/login', async (req, res) => {
         });
 
         if (!user) {
+
             return res.status(400).json({
+
                 message: 'Invalid credentials'
+
             });
+
         }
 
-        const isMatch = await bcrypt.compare(
-            password,
-            user.password
-        );
+        const isMatch =
+            await bcrypt.compare(
+                password,
+                user.password
+            );
 
         if (!isMatch) {
+
             return res.status(400).json({
+
                 message: 'Invalid credentials'
+
             });
+
         }
 
-        const token = jwt.sign(
-            {
-                id: user._id,
-                role: user.role
-            },
-            JWT_SECRET,
-            {
-                expiresIn: '1d'
-            }
-        );
+        const token =
+            jwt.sign(
+
+                {
+                    id: user._id,
+                    role: user.role
+                },
+
+                JWT_SECRET,
+
+                {
+                    expiresIn: '1d'
+                }
+
+            );
 
         res.json({
 
@@ -340,7 +474,9 @@ app.post('/api/auth/login', async (req, res) => {
     } catch (err) {
 
         res.status(500).json({
+
             message: err.message
+
         });
 
     }
@@ -371,7 +507,9 @@ app.get(
             if (!user) {
 
                 return res.status(404).json({
+
                     message: 'User not found'
+
                 });
 
             }
@@ -381,7 +519,9 @@ app.get(
         } catch (err) {
 
             res.status(500).json({
+
                 message: 'Error fetching profile'
+
             });
 
         }
@@ -408,7 +548,9 @@ app.put(
             if (!user) {
 
                 return res.status(404).json({
+
                     message: 'User not found'
+
                 });
 
             }
@@ -444,7 +586,8 @@ app.put(
 
             res.json({
 
-                message: 'Profile updated successfully',
+                message:
+                    'Profile updated successfully',
 
                 user: {
 
@@ -500,7 +643,9 @@ app.get('/api/products', async (req, res) => {
     } catch (err) {
 
         res.status(500).json({
+
             message: err.message
+
         });
 
     }
@@ -524,7 +669,9 @@ app.post('/api/products', async (req, res) => {
     } catch (err) {
 
         res.status(500).json({
+
             message: err.message
+
         });
 
     }
@@ -540,11 +687,15 @@ app.put('/api/products/:id', async (req, res) => {
 
         const updatedProduct =
             await Product.findByIdAndUpdate(
+
                 req.params.id,
+
                 req.body,
+
                 {
                     new: true
                 }
+
             );
 
         res.json(updatedProduct);
@@ -552,7 +703,9 @@ app.put('/api/products/:id', async (req, res) => {
     } catch (err) {
 
         res.status(500).json({
+
             message: err.message
+
         });
 
     }
@@ -571,13 +724,17 @@ app.delete('/api/products/:id', async (req, res) => {
         );
 
         res.json({
+
             message: 'Product deleted'
+
         });
 
     } catch (err) {
 
         res.status(500).json({
+
             message: err.message
+
         });
 
     }
@@ -605,17 +762,22 @@ app.get(
                 await Order.find({
 
                     $or: [
+
                         {
                             userId: userId
                         },
+
                         {
                             customerName:
                                 req.user.name
                         }
+
                     ]
 
                 }).sort({
+
                     createdAt: -1
+
                 });
 
             res.json(orders);
@@ -623,8 +785,10 @@ app.get(
         } catch (err) {
 
             res.status(500).json({
+
                 message:
                     'Server error while fetching orders'
+
             });
 
         }
@@ -642,7 +806,9 @@ app.get('/api/orders', async (req, res) => {
         const orders =
             await Order.find()
                 .sort({
+
                     createdAt: -1
+
                 });
 
         res.json(orders);
@@ -650,7 +816,9 @@ app.get('/api/orders', async (req, res) => {
     } catch (err) {
 
         res.status(500).json({
+
             message: err.message
+
         });
 
     }
@@ -674,7 +842,9 @@ app.post('/api/orders', async (req, res) => {
     } catch (err) {
 
         res.status(500).json({
+
             message: err.message
+
         });
 
     }
@@ -696,12 +866,16 @@ app.put(
                     req.params.id,
 
                     {
+
                         status:
                             req.body.status
+
                     },
 
                     {
+
                         new: true
+
                     }
 
                 );
@@ -711,7 +885,9 @@ app.put(
         } catch (err) {
 
             res.status(500).json({
+
                 message: err.message
+
             });
 
         }
@@ -731,13 +907,17 @@ app.delete('/api/orders/:id', async (req, res) => {
         );
 
         res.json({
+
             message: 'Order deleted'
+
         });
 
     } catch (err) {
 
         res.status(500).json({
+
             message: err.message
+
         });
 
     }
@@ -759,7 +939,10 @@ app.get(
 
             const reviews =
                 await Review.find({
-                    productId: req.params.id
+
+                    productId:
+                        req.params.id
+
                 });
 
             const count =
@@ -768,12 +951,18 @@ app.get(
             const average =
                 count > 0
                     ? (
+
                         reviews.reduce(
+
                             (acc, item) =>
                                 item.rating + acc,
+
                             0
+
                         ) / count
+
                     ).toFixed(1)
+
                     : 0;
 
             res.json({
@@ -781,10 +970,12 @@ app.get(
                 reviews,
 
                 stats: {
+
                     average:
                         Number(average),
 
                     count
+
                 }
 
             });
@@ -792,8 +983,10 @@ app.get(
         } catch (err) {
 
             res.status(500).json({
+
                 message:
                     'Error loading reviews'
+
             });
 
         }
@@ -877,9 +1070,13 @@ app.get(
 
             const messages =
                 await Message.find({
+
                     userId: userId
+
                 }).sort({
+
                     createdAt: 1
+
                 });
 
             res.json(messages);
@@ -887,8 +1084,10 @@ app.get(
         } catch (err) {
 
             res.status(500).json({
+
                 message:
                     'Error fetching messages'
+
             });
 
         }
@@ -911,9 +1110,13 @@ app.get(
 
             const messages =
                 await Message.find({
+
                     userId: userId
+
                 }).sort({
+
                     createdAt: 1
+
                 });
 
             res.json(messages);
@@ -921,8 +1124,10 @@ app.get(
         } catch (err) {
 
             res.status(500).json({
+
                 message:
                     'Error fetching messages'
+
             });
 
         }
@@ -941,9 +1146,13 @@ app.get(
 
             const users =
                 await User.find({
+
                     role: 'customer'
+
                 }).select(
+
                     'name email _id'
+
                 );
 
             res.json(users);
@@ -951,7 +1160,9 @@ app.get(
         } catch (err) {
 
             res.status(500).json({
+
                 message: err.message
+
             });
 
         }
@@ -970,10 +1181,14 @@ app.get(
 
             const messages =
                 await Message.find({
+
                     userId:
                         req.params.userId
+
                 }).sort({
+
                     createdAt: 1
+
                 });
 
             res.json(messages);
@@ -981,7 +1196,9 @@ app.get(
         } catch (err) {
 
             res.status(500).json({
+
                 message: err.message
+
             });
 
         }
@@ -1023,7 +1240,9 @@ app.post(
         } catch (err) {
 
             res.status(500).json({
+
                 message: err.message
+
             });
 
         }
@@ -1033,66 +1252,18 @@ app.post(
 
 
 // ============================================================
-//                MONGODB CONNECTION & SERVER
+//                     HEALTH CHECK
 // ============================================================
 
-// ============================================================
-//                MONGODB CONNECTION & SERVER
-// ============================================================
+app.get('/', (req, res) => {
 
-const MONGO_URI =
-    process.env.MONGO_URI ||
-    process.env.MONGODB_URI ||
-    'mongodb+srv://saduaadmin:sadia77@cluster0.ykv8qem.mongodb.net/flora_fleur?retryWrites=true&w=majority';
+    res.status(200).json({
 
-let isConnected = false;
+        message:
+            "Flower Shop Backend is live and working!"
 
-async function connectDB() {
-    if (isConnected && mongoose.connection.readyState === 1) {
-        return;
-    }
+    });
 
-    if (mongoose.connection.readyState === 1) {
-        isConnected = true;
-        return;
-    }
-
-    try {
-        await mongoose.connect(MONGO_URI, {
-            serverSelectionTimeoutMS: 10000,
-            connectTimeoutMS: 10000
-        });
-
-        isConnected = true;
-
-        console.log('✅ MongoDB Connected Successfully!');
-    } catch (error) {
-        isConnected = false;
-
-        console.error(
-            '❌ MongoDB Connection Error:',
-            error.message
-        );
-
-        throw error;
-    }
-}
-
-
-// ============================================================
-//              MONGODB CONNECTION MIDDLEWARE
-// ============================================================
-
-app.use(async (req, res, next) => {
-    try {
-        await connectDB();
-        next();
-    } catch (error) {
-        res.status(500).json({
-            message: 'Database connection failed',
-            error: error.message
-        });
-    }
 });
 
 
@@ -1100,35 +1271,47 @@ app.use(async (req, res, next) => {
 //                     LOCAL SERVER
 // ============================================================
 
-const PORT = process.env.PORT || 5000;
+const PORT =
+    process.env.PORT || 5000;
 
 if (!process.env.VERCEL) {
+
     connectDB()
+
         .then(() => {
-            app.listen(PORT, '0.0.0.0', () => {
-                console.log(
-                    `🚀 Server running on port ${PORT}`
-                );
-            });
-        })
-        .catch((error) => {
-            console.error(
-                '❌ Failed to start server:',
-                error.message
+
+            app.listen(
+
+                PORT,
+
+                '0.0.0.0',
+
+                () => {
+
+                    console.log(
+
+                        `🚀 Server running on port ${PORT}`
+
+                    );
+
+                }
+
             );
+
+        })
+
+        .catch((err) => {
+
+            console.error(
+
+                '❌ Failed to start server:',
+                err.message
+
+            );
+
         });
+
 }
-
-
-// ============================================================
-//                     HEALTH CHECK
-// ============================================================
-
-app.get('/', (req, res) => {
-    res.status(200).json({
-        message: 'Flower Shop Backend is live and working!'
-    });
-});
 
 
 // ============================================================
