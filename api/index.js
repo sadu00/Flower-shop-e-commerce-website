@@ -1036,60 +1036,103 @@ app.post(
 //                MONGODB CONNECTION & SERVER
 // ============================================================
 
+// ============================================================
+//                MONGODB CONNECTION & SERVER
+// ============================================================
+
 const MONGO_URI =
     process.env.MONGO_URI ||
     process.env.MONGODB_URI ||
     'mongodb+srv://saduaadmin:sadia77@cluster0.ykv8qem.mongodb.net/flora_fleur?retryWrites=true&w=majority';
 
-mongoose.connect(MONGO_URI)
+let isConnected = false;
 
-    .then(() => {
+async function connectDB() {
+    if (isConnected && mongoose.connection.readyState === 1) {
+        return;
+    }
 
-        console.log(
-            '✅ MongoDB Connected Successfully!'
-        );
+    if (mongoose.connection.readyState === 1) {
+        isConnected = true;
+        return;
+    }
 
-    })
+    try {
+        await mongoose.connect(MONGO_URI, {
+            serverSelectionTimeoutMS: 10000,
+            connectTimeoutMS: 10000
+        });
 
-    .catch((err) => {
+        isConnected = true;
+
+        console.log('✅ MongoDB Connected Successfully!');
+    } catch (error) {
+        isConnected = false;
 
         console.error(
             '❌ MongoDB Connection Error:',
-            err.message
+            error.message
         );
 
-    });
-
-
-const PORT =
-    process.env.PORT || 5000;
-
-
-// ---------------- Local vs Vercel ----------------
-// Vercel serverless environment এ app.listen() চালানো যায় না।
-// শুধু local development এ (VERCEL env var না থাকলে) server চালু হবে।
-
-if (!process.env.VERCEL) {
-
-    app.listen(
-        PORT,
-        '0.0.0.0',
-        () => {
-
-            console.log(
-                `🚀 Server running on port ${PORT}`
-            );
-
-        }
-    );
-
+        throw error;
+    }
 }
 
-app.get('/', (req, res) => {
-  res.status(200).json({ message: "Flower Shop Backend is live and working!" });
+
+// ============================================================
+//              MONGODB CONNECTION MIDDLEWARE
+// ============================================================
+
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (error) {
+        res.status(500).json({
+            message: 'Database connection failed',
+            error: error.message
+        });
+    }
 });
 
 
+// ============================================================
+//                     LOCAL SERVER
+// ============================================================
 
-// Vercel কে app টা serverless function হিসেবে ব্যবহার করতে দিতে export করা lagbe
+const PORT = process.env.PORT || 5000;
+
+if (!process.env.VERCEL) {
+    connectDB()
+        .then(() => {
+            app.listen(PORT, '0.0.0.0', () => {
+                console.log(
+                    `🚀 Server running on port ${PORT}`
+                );
+            });
+        })
+        .catch((error) => {
+            console.error(
+                '❌ Failed to start server:',
+                error.message
+            );
+        });
+}
+
+
+// ============================================================
+//                     HEALTH CHECK
+// ============================================================
+
+app.get('/', (req, res) => {
+    res.status(200).json({
+        message: 'Flower Shop Backend is live and working!'
+    });
+});
+
+
+// ============================================================
+//                     VERCEL EXPORT
+// ============================================================
+
 module.exports = app;
