@@ -1,36 +1,13 @@
-﻿{
+{
+  "version": 2,
   "rewrites": [
     {
-      "source": "/api/:path*",
+      "source": "/api/(.*)",
       "destination": "/api/index.js"
     },
     {
-      "source": "/",
-      "destination": "/frontend/index.html"
-    },
-    {
-      "source": "/login",
-      "destination": "/frontend/login.html"
-    },
-    {
-      "source": "/cart",
-      "destination": "/frontend/cart.html"
-    },
-    {
-      "source": "/orders",
-      "destination": "/frontend/orders.html"
-    },
-    {
-      "source": "/profile",
-      "destination": "/frontend/profile.html"
-    },
-    {
-      "source": "/admin",
-      "destination": "/frontend/admin.html"
-    },
-    {
-      "source": "/chat",
-      "destination": "/frontend/chat.html"
+      "source": "/(.*)",
+      "destination": "/frontend/$1"
     }
   ]
 }
