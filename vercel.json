@@ -1,15 +1,36 @@
 ﻿{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "frontend/dist",
   "rewrites": [
     {
       "source": "/api/:path*",
       "destination": "/api/index.js"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "source": "/",
+      "destination": "/frontend/index.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/frontend/login.html"
+    },
+    {
+      "source": "/cart",
+      "destination": "/frontend/cart.html"
+    },
+    {
+      "source": "/orders",
+      "destination": "/frontend/orders.html"
+    },
+    {
+      "source": "/profile",
+      "destination": "/frontend/profile.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/frontend/admin.html"
+    },
+    {
+      "source": "/chat",
+      "destination": "/frontend/chat.html"
     }
   ]
 }
