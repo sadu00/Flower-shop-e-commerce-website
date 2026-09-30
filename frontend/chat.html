@@ -130,7 +130,7 @@
 
 <script>
 
-const API_URL = "https://flower-shop-e-commerce-website-nu.vercel.app";
+const API_URL = "https://flower-shop-e-commerce-website-nu.vercel.app/api";
 
 const token =
     localStorage.getItem('token');
@@ -162,7 +162,7 @@ async function loadProfile() {
 
         const response =
             await fetch(
-                `${API_URL}/profile`,
+                `${API_URL}/users/profile`,
                 {
 
                     headers: {
@@ -267,7 +267,7 @@ async function updateProfile(event) {
 
         const response =
             await fetch(
-                `${API_URL}/profile`,
+                `${API_URL}/users/profile`,
                 {
 
                     method: 'PUT',

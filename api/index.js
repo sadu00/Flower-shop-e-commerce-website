@@ -763,40 +763,18 @@ app.get(
 
         try {
 
-            const userId =
-                req.user.id || req.user._id;
+            const userId = req.user.id || req.user._id;
 
-            const orders =
-                await Order.find({
-
-                    $or: [
-
-                        {
-                            userId: userId
-                        },
-
-                        {
-                            customerName:
-                                req.user.name
-                        }
-
-                    ]
-
-                }).sort({
-
-                    createdAt: -1
-
-                });
+            const orders = await Order.find({ userId })
+                .sort({ createdAt: -1 });
 
             res.json(orders);
 
         } catch (err) {
 
             res.status(500).json({
-
-                message:
-                    'Server error while fetching orders'
-
+                message: 'Server error while fetching orders',
+                error: err.message
             });
 
         }
@@ -836,12 +814,49 @@ app.get('/api/orders', async (req, res) => {
 
 // ---------------- Create Order ----------------
 
-app.post('/api/orders', async (req, res) => {
+app.post('/api/orders', authenticateToken, async (req, res) => {
 
     try {
 
-        const order =
-            new Order(req.body);
+        const userId = req.user.id || req.user._id;
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found. Please login again.' });
+        }
+
+        const { items, totalAmount, address, phone, paymentMethod, paymentInfo } = req.body;
+
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ message: 'Cart is empty.' });
+        }
+
+        if (!address || !phone) {
+            return res.status(400).json({ message: 'Address and phone are required.' });
+        }
+
+        const order = new Order({
+
+            userId: user._id,
+
+            customerName: user.name,
+
+            phone,
+
+            address,
+
+            items,
+
+            totalAmount: Number(totalAmount) || items.reduce(
+                (sum, i) => sum + Number(i.price) * (Number(i.qty) || 1), 0
+            ),
+
+            paymentMethod: paymentMethod || 'COD',
+
+            paymentInfo: paymentInfo || 'COD'
+
+        });
 
         await order.save();
 
@@ -850,9 +865,7 @@ app.post('/api/orders', async (req, res) => {
     } catch (err) {
 
         res.status(500).json({
-
             message: err.message
-
         });
 
     }
@@ -1001,6 +1014,43 @@ app.get(
 
     }
 );
+
+
+// ---------------- Add Review ----------------
+
+app.post('/api/reviews', authenticateToken, async (req, res) => {
+
+    try {
+
+        const userId = req.user.id || req.user._id;
+
+        const user = await User.findById(userId);
+
+        const { productId, rating, comment } = req.body;
+
+        if (!productId || !rating || rating < 1 || rating > 5) {
+            return res.status(400).json({ message: 'Valid productId and rating (1-5) are required.' });
+        }
+
+        const review = new Review({
+            productId,
+            userId,
+            userName: user ? user.name : 'Customer',
+            rating: Number(rating),
+            comment
+        });
+
+        await review.save();
+
+        res.status(201).json({ message: 'Review submitted!', review });
+
+    } catch (err) {
+
+        res.status(500).json({ message: 'Error saving review', error: err.message });
+
+    }
+
+});
 
 
 // ============================================================

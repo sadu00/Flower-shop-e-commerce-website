@@ -210,7 +210,7 @@
 
     <!-- Client-Side JavaScript Logic -->
     <script>
-        const API_URL = "";
+        const API_URL = "https://flower-shop-e-commerce-website-nu.vercel.app/api";
         let products = [];
         let cart = JSON.parse(localStorage.getItem('cart')) || [];
         let chatInterval = null;
@@ -240,7 +240,7 @@
         // Fetch Product List from Backend (UPDATED LOGIC)
         async function fetchProducts() {
             try {
-                const res = await fetch(`${API_URL}/api/products`);
+                const res = await fetch(`${API_URL}/products`);
                 if (!res.ok) throw new Error('Failed to fetch products');
                 
                 const data = await res.json();

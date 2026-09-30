@@ -21,7 +21,7 @@
 
     <!-- JavaScript Logical Implementation -->
     <script>
-        const API_URL = "https://flower-shop-e-commerce-website-nu.vercel.app";
+        const API_URL = "https://flower-shop-e-commerce-website-nu.vercel.app/api";
         const token = localStorage.getItem('token');
 
         // Check user authentication
@@ -36,6 +36,7 @@
                 Pending: 'bg-warning text-dark',
                 Processing: 'bg-info text-dark',
                 Completed: 'bg-success',
+                Delivered: 'bg-success',
                 Cancelled: 'bg-danger'
             };
             return `<span class="badge ${classMap[status] || 'bg-secondary'}">${status || 'Pending'}</span>`;
@@ -70,7 +71,7 @@
                             <p class="mb-1"><strong>Payment:</strong> ${o.paymentMethod || 'Demo'}</p>
                             <p class="mb-1"><strong>Delivery:</strong> ${o.address || '—'} ${o.phone ? `(${o.phone})` : ''}</p>
                             <small class="text-muted">${new Date(o.createdAt).toLocaleString()}</small>
-                            ${o.status === 'Completed' ? `
+                            ${(o.status === 'Completed' || o.status === 'Delivered') ? `
                                 <div class="mt-3">
                                     <a href="index.html" class="btn btn-outline-danger btn-sm">⭐ Rate & Review from a product page</a>
                                 </div>

@@ -46,7 +46,7 @@
 
     <!-- JavaScript Logical Implementation -->
     <script>
-        const API_URL = "https://flower-shop-e-commerce-website-nu.vercel.app";
+        const API_URL = "https://flower-shop-e-commerce-website-nu.vercel.app/api";
         const token = localStorage.getItem('token');
 
         // Authentication Check
@@ -89,7 +89,7 @@
             };
 
             try {
-                const res = await fetch(`${API_URL}/profile`, {
+                const res = await fetch(`${API_URL}/users/profile`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
